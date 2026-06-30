@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POMY Sport — Profit Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#f3f5f9;--card:#fff;--ink:#1f2430;--muted:#667085;--line:#e6e9ef;
+    --accent:#7c5cff;--green:#10b981;--red:#ef4444;--amber:#f59e0b;
+    --fb:#1877f2;--gg:#34a853;--teal:#14b8a6;--indigo:#6366f1;--slate:#94a3b8}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Segoe UI',Arial,sans-serif;padding:22px;font-size:14px}
+  h1{font-size:21px;margin:0}
+  .sub{color:var(--muted);font-size:12px;margin:4px 0 16px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{background:none;border:none;color:var(--muted);padding:7px 13px;cursor:pointer;font-size:13px;font-weight:600}
+  .seg button.on{background:var(--accent);color:#fff}
+  .lbl{color:var(--muted);font-size:12px}
+  .date{background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit}
+  .spacer{flex:1}
+  .tabs{display:flex;gap:6px;border-bottom:2px solid var(--line);margin-bottom:18px;flex-wrap:wrap}
+  .tabs button{background:none;border:none;border-bottom:3px solid transparent;color:var(--muted);
+    padding:10px 16px;cursor:pointer;font-size:15px;font-weight:700;margin-bottom:-2px}
+  .tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
+  .screen{display:none}.screen.on{display:block}
+  .grid{display:grid;gap:14px}
+  .g4{grid-template-columns:repeat(4,1fr)}.g2{grid-template-columns:2fr 1fr}
+  @media(max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  .card .t{color:var(--muted);font-size:12px;margin-bottom:7px;display:flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:3px;display:inline-block}
+  .card .v{font-size:24px;font-weight:700;letter-spacing:-.5px}
+  .card .meta{color:var(--muted);font-size:11px;margin-top:6px}
+  .chg{font-size:12px;font-weight:700;margin-top:8px}
+  .up{color:var(--green)}.down{color:var(--red)}.pos{color:var(--green)}.neg{color:var(--red)}
+  .sec{margin-top:14px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  .panel h2{font-size:15px;margin:0 0 4px}.panel .ph{color:var(--muted);font-size:12px;margin:0 0 14px}
+  .phead{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px}
+  canvas{max-height:330px}
+  .donutwrap{position:relative;display:flex;align-items:center;justify-content:center}
+  .donutctr{position:absolute;text-align:center}.donutctr b{font-size:20px}.donutctr span{display:block;color:var(--muted);font-size:11px}
+  .legend{margin-top:6px}.legrow{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--line)}
+  .legrow .nm{flex:1}.legrow .vl{color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:9px 8px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--muted);font-weight:600;font-size:11px}
+  tr:hover td{background:#fafbfc}
+  td.num{font-variant-numeric:tabular-nums}
+  .tot td{font-weight:700;border-top:2px solid var(--accent);background:#faf9ff}
+  .pill{padding:2px 8px;border-radius:20px;font-size:12px;font-weight:700}
+  .mh{background:#e7f8f0;color:var(--green)}.ml{background:#fdeaea;color:var(--red)}.mm{background:#efeaff;color:var(--accent)}
+  .barrow{display:flex;align-items:center;gap:10px;margin:10px 0;font-size:13px}
+  .barrow .bn{width:96px;display:flex;align-items:center;gap:6px}
+  .bartrack{flex:1;height:9px;background:var(--line);border-radius:6px;overflow:hidden}
+  .barfill{height:100%;border-radius:6px}
+  .clickable{cursor:pointer}.clickable:hover td{background:#f0eefb}
+  .drill td{background:#faf9ff!important;font-size:12px}
+  .note{color:var(--muted);font-size:11px;line-height:1.6;margin-top:10px}
+</style>
+</head>
+<body>
+  <h1>📊 POMY Sport — Profit Dashboard</h1>
+  <div class="sub">Real revenue (Shopify) vs ad spend (Meta + Google) · net profit incl. COGS &amp; fees · updated: <span id="updated">—</span></div>
+
+  <div class="controls">
+    <div class="seg" id="preset">
+      <button data-r="today">Today</button>
+      <button data-r="yesterday">Yesterday</button>
+      <button data-r="7">Last 7 days</button>
+      <button data-r="30">Last 30 days</button>
+      <button data-r="month">This month</button>
+      <button data-r="all">All</button>
+    </div>
+    <span class="lbl">From</span><input type="date" id="from" class="date">
+    <span class="lbl">To</span><input type="date" id="to" class="date">
+    <div class="spacer"></div>
+    <span class="lbl">View</span>
+    <div class="seg" id="period">
+      <button data-p="day">Daily</button><button data-p="week">Weekly</button><button data-p="month">Monthly</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button data-s="overview">Overview</button>
+    <button data-s="marketing">Marketing</button>
+    <button data-s="products">Products</button>
+    <button data-s="periodic">Periodic</button>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="screen" id="sc-overview">
+    <div class="grid g4" id="kpis"></div>
+    <div class="grid g4 sec" id="ratios"></div>
+    <div class="grid g2 sec">
+      <div class="panel"><div class="phead"><div><h2>Key metrics over time</h2><p class="ph">Sales, marketing &amp; profit</p></div></div><canvas id="cmpChart"></canvas></div>
+      <div class="panel"><h2>Profit &amp; expenses</h2><p class="ph">Share of net sales</p>
+        <div class="donutwrap"><canvas id="donut" height="220"></canvas><div class="donutctr" id="donutctr"></div></div>
+        <div class="legend" id="donutleg"></div></div>
+    </div>
+  </div>
+
+  <!-- MARKETING -->
+  <div class="screen" id="sc-marketing">
+    <div class="controls">
+      <span class="lbl">Platform</span>
+      <div class="seg" id="mktplat">
+        <button data-m="all">All</button><button data-m="facebook">Facebook</button><button data-m="google">Google</button>
+      </div>
+    </div>
+    <div class="grid g4" id="mktcards"></div>
+    <div class="grid g2 sec">
+      <div class="panel"><h2>Spend &amp; sales by platform</h2><p class="ph">Total in selected range · reported (platform) vs attributed (Shopify)</p><div id="spendBars"></div></div>
+      <div class="panel"><div class="phead"><div><h2>Spend vs sales trend</h2><p class="ph">Over time</p></div></div><canvas id="spendChart" height="200"></canvas></div>
+    </div>
+    <div class="panel sec"><div class="phead"><div><h2>Linked orders</h2><p class="ph" id="ordsub">Orders attributed to the selected platform</p></div></div><table id="ordtbl"></table></div>
+    <div class="note" id="mktnote"></div>
+  </div>
+
+  <!-- PRODUCTS -->
+  <div class="screen" id="sc-products">
+    <div class="panel">
+      <div class="phead"><div class="seg" id="prodtab">
+        <button data-s="best">Best sellers</button><button data-s="profit">Most profitable</button><button data-s="loss">Least profitable</button>
+      </div></div>
+      <table id="prodtbl"></table>
+      <div class="note">Sales, profit &amp; margin are on a <b>net</b> basis (order-level discounts allocated). "Most/Least profitable" sort by <b>margin %</b>.</div>
+    </div>
+  </div>
+
+  <!-- PERIODIC -->
+  <div class="screen" id="sc-periodic">
+    <div class="panel">
+      <div class="phead"><div><h2>Periodic breakdown</h2><p class="ph">Click a row to see products sold that period</p></div></div>
+      <table id="tbl"></table>
+      <div class="note"><b>MER</b>=Total sales÷Marketing · <b>Net profit</b>=Net sales−COGS−Marketing−Fees · <b>AOV</b>=Total sales÷Orders.</div>
+    </div>
+  </div>
+
+<script>
+let D=[], P=[], PLAT=[], ORD=[];
+let screen='overview', period='day', dateFrom='', dateTo='', mktPlatform='all', prodSort='best';
+let TODAY='', drillOpen=null;
+let cmpChart=null, spendChart=null, donutChart=null;
+const fromEl=document.getElementById('from'), toEl=document.getElementById('to');
+
+const fmt = n => '₪'+Math.round(n||0).toLocaleString('en-US');
+const f2  = n => (Math.round((n||0)*100)/100).toLocaleString('en-US');
+const pctTxt = n => (n>=0?'▲ ':'▼ ')+Math.abs(n*100).toFixed(1)+'%';
+const isoLocal = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+// Real current date in Israel (Asia/Jerusalem), independent of the viewer's device timezone.
+const israelToday = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jerusalem',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const shift = (iso,n)=>{const d=new Date(iso+'T00:00:00');d.setDate(d.getDate()+n);return isoLocal(d);};
+
+/* ---------- aggregation ---------- */
+function sumRange(from,to){
+  const t={orders:0,gross:0,disc:0,net:0,total:0,cogs:0,fees:0,meta:0,google:0,mrep:0,grep:0};
+  for(const r of D){ if(r.date<from||r.date>to) continue;
+    t.orders+=r.orders||0;t.gross+=r.gross_sales||0;t.disc+=r.discounts||0;t.net+=r.net_sales||0;
+    t.total+=r.total_sales||0;t.cogs+=r.cogs||0;t.fees+=r.fees||0;t.meta+=r.meta_spend||0;
+    t.google+=r.google_spend||0;t.mrep+=r.meta_reported||0;t.grep+=r.google_reported||0; }
+  return t;
+}
+function metrics(t){
+  const marketing=t.meta+t.google, grossProfit=t.net-t.cogs, netProfit=t.net-t.cogs-marketing-t.fees;
+  return {...t, marketing, reported:t.mrep+t.grep, grossProfit, netProfit,
+    grossMargin:t.net?grossProfit/t.net:0, netMargin:t.net?netProfit/t.net:0,
+    roas:marketing?t.total/marketing:0, poas:marketing?netProfit/marketing:0,
+    aov:t.orders?t.total/t.orders:0, cpa:t.orders?marketing/t.orders:0, bcac:t.orders?grossProfit/t.orders:0};
+}
+function prevPeriod(){
+  if(!dateFrom||!dateTo) return null;
+  const len=Math.round((new Date(dateTo)-new Date(dateFrom))/864e5)+1;
+  return {from:shift(dateFrom,-len), to:shift(dateFrom,-1)};
+}
+function weekKey(iso){const d=new Date(iso+'T00:00:00');d.setDate(d.getDate()-d.getDay());return isoLocal(d);}
+function monthKey(iso){return iso.slice(0,7);}
+function bkey(d){return period==='day'?d:period==='week'?weekKey(d):monthKey(d);}
+function bucketLabel(k){
+  if(period==='month'){const[y,m]=k.split('-');return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+y;}
+  const d=new Date(k+'T00:00:00');return d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit'});
+}
+function inRange(date){return (!dateFrom||date>=dateFrom)&&(!dateTo||date<=dateTo);}
+function buckets(){
+  const map={};
+  for(const r of D){ if(!inRange(r.date)) continue; const k=bkey(r.date);
+    const o=map[k]||(map[k]={k,total:0,gross:0,net:0,cogs:0,fees:0,meta:0,google:0,orders:0});
+    o.total+=r.total_sales||0;o.gross+=r.gross_sales||0;o.net+=r.net_sales||0;o.cogs+=r.cogs||0;
+    o.fees+=r.fees||0;o.meta+=r.meta_spend||0;o.google+=r.google_spend||0;o.orders+=r.orders||0; }
+  return Object.values(map).sort((a,b)=>a.k<b.k?-1:1).map(o=>{
+    o.marketing=o.meta+o.google;o.netProfit=o.net-o.cogs-o.marketing-o.fees;
+    o.mer=o.marketing?o.total/o.marketing:0;o.aov=o.orders?o.total/o.orders:0;return o;});
+}
+function productAgg(){
+  const m={};
+  for(const p of P){ if(!inRange(p.date)) continue;
+    const o=m[p.title]||(m[p.title]={title:p.title,units:0,orders:0,sales:0,cogs:0});
+    o.units+=p.units||0;o.orders+=p.orders||0;o.sales+=p.sales||0;o.cogs+=p.cogs||0; }
+  return Object.values(m).map(o=>{o.profit=o.sales-o.cogs;o.margin=o.sales?o.profit/o.sales:0;o.aov=o.orders?o.sales/o.orders:0;return o;});
+}
+function platSalesRange(){
+  const s={facebook:0,google:0,other:0};
+  for(const p of PLAT){ if(!inRange(p.date)) continue; if(s[p.platform]!=null) s[p.platform]+=p.sales||0; }
+  return s;
+}
+function productsForBucket(k){
+  const m={};
+  for(const p of P){ if(!inRange(p.date)||bkey(p.date)!==k) continue;
+    const o=m[p.title]||(m[p.title]={title:p.title,units:0,sales:0,cogs:0});
+    o.units+=p.units||0;o.sales+=p.sales||0;o.cogs+=p.cogs||0; }
+  return Object.values(m).sort((a,b)=>b.sales-a.sales);
+}
+
+/* ---------- shared ui ---------- */
+function chgHtml(cur,prev,goodUp=true){
+  if(!prev||prev===0) return '';
+  const ch=(cur-prev)/Math.abs(prev), good=goodUp?ch>=0:ch<0;
+  return `<div class="chg ${good?'up':'down'}">${pctTxt(ch)}</div>`;
+}
+function card(dot,title,value,meta,chg){
+  return `<div class="card"><div class="t">${dot?`<span class="dot" style="background:${dot}"></span>`:''}${title}</div>
+    <div class="v">${value}</div>${meta?`<div class="meta">${meta}</div>`:''}${chg||''}</div>`;
+}
+function merPill(v){const c=v>=2?'mh':v<1?'ml':'mm';return `<span class="pill ${c}">${f2(v)}</span>`;}
+
+/* ---------- render ---------- */
+function render(){
+  const m=metrics(sumRange(dateFrom||'0000',dateTo||'9999'));
+  if(screen==='overview') renderOverview(m);
+  else if(screen==='marketing') renderMarketing(m);
+  else if(screen==='products') renderProducts();
+  else if(screen==='periodic') renderPeriodic();
+}
+
+function renderOverview(m){
+  const pp=prevPeriod(), pm=pp?metrics(sumRange(pp.from,pp.to)):null;
+  document.getElementById('kpis').innerHTML=[
+    card('var(--accent)','Total sales',fmt(m.total),`Net ${fmt(m.net)} · Gross ${fmt(m.gross)}`,chgHtml(m.total,pm&&pm.total)),
+    card('var(--teal)','Gross profit',fmt(m.grossProfit),`Gross margin ${(m.grossMargin*100).toFixed(1)}%`,chgHtml(m.grossProfit,pm&&pm.grossProfit)),
+    card('var(--green)','Net profit',`<span class="${m.netProfit>=0?'pos':'neg'}">${fmt(m.netProfit)}</span>`,`Net margin ${(m.netMargin*100).toFixed(1)}%`,chgHtml(m.netProfit,pm&&pm.netProfit)),
+    card('#111827','Orders',m.orders.toLocaleString('en-US'),`AOV ${fmt(m.aov)}`,chgHtml(m.orders,pm&&pm.orders)),
+    card('var(--fb)','Marketing',fmt(m.marketing),`Meta ${fmt(m.meta)} · Google ${fmt(m.google)}`,chgHtml(m.marketing,pm&&pm.marketing,false)),
+    card('var(--indigo)','COGS',fmt(m.cogs),`${m.net?(m.cogs/m.net*100).toFixed(1):0}% of net · incl. shipping`,chgHtml(m.cogs,pm&&pm.cogs,false)),
+    card('#b8860b','Transaction fees',fmt(m.fees),'1.19% · PayPal 2%',chgHtml(m.fees,pm&&pm.fees,false)),
+    card('var(--slate)','Net sales',fmt(m.net),'After discounts',chgHtml(m.net,pm&&pm.net)),
+  ].join('');
+  document.getElementById('ratios').innerHTML=[
+    card('','ROAS',f2(m.roas),'Revenue per ₪1 spend',chgHtml(m.roas,pm&&pm.roas)),
+    card('','POAS',f2(m.poas),'Net profit per ₪1 spend',chgHtml(m.poas,pm&&pm.poas)),
+    card('','CPA',fmt(m.cpa),'Spend per order',chgHtml(m.cpa,pm&&pm.cpa,false)),
+    card('','BCAC',fmt(m.bcac),'Gross profit per order',chgHtml(m.bcac,pm&&pm.bcac)),
+  ].join('');
+  // donut
+  const parts=[{nm:'Net profit',v:Math.max(0,m.netProfit),c:'#d97742'},{nm:'Marketing',v:m.marketing,c:'#14b8a6'},
+    {nm:'COGS',v:m.cogs,c:'#6366f1'},{nm:'Fees',v:m.fees,c:'#b8860b'}];
+  const tot=parts.reduce((a,p)=>a+p.v,0)||1;
+  document.getElementById('donutctr').innerHTML=`<b>${fmt(m.net)}</b><span>Net sales</span>`;
+  document.getElementById('donutleg').innerHTML=parts.map(p=>`<div class="legrow"><span class="dot" style="background:${p.c}"></span><span class="nm">${p.nm}</span><span class="vl">${(p.v/tot*100).toFixed(1)}% · ${fmt(p.v)}</span></div>`).join('');
+  if(donutChart)donutChart.destroy();
+  donutChart=new Chart(document.getElementById('donut'),{type:'doughnut',data:{labels:parts.map(p=>p.nm),datasets:[{data:parts.map(p=>p.v),backgroundColor:parts.map(p=>p.c),borderWidth:0}]},options:{cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${fmt(c.raw)}`}}}}});
+  // compare chart
+  const b=buckets(), labels=b.map(x=>bucketLabel(x.k));
+  if(cmpChart)cmpChart.destroy();
+  cmpChart=new Chart(document.getElementById('cmpChart'),{data:{labels,datasets:[
+    {type:'line',label:'Total sales',data:b.map(x=>x.total),borderColor:'#7c5cff',backgroundColor:'#7c5cff',tension:.3,pointRadius:2},
+    {type:'line',label:'Marketing',data:b.map(x=>x.marketing),borderColor:'#14b8a6',backgroundColor:'#14b8a6',tension:.3,pointRadius:2},
+    {type:'line',label:'Net profit',data:b.map(x=>x.netProfit),borderColor:'#d97742',backgroundColor:'#d97742',tension:.3,pointRadius:2},
+    {type:'line',label:'Orders',data:b.map(x=>x.orders),yAxisID:'y2',borderColor:'#111827',backgroundColor:'#111827',borderDash:[5,4],tension:.3,pointRadius:2},
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{labels:{color:'#6b7280',boxWidth:12}},tooltip:{callbacks:{label:c=>c.dataset.label==='Orders'?`Orders: ${c.raw}`:`${c.dataset.label}: ${fmt(c.raw)}`}}},
+    scales:{x:{ticks:{color:'#6b7280'},grid:{color:'#eef1f5'}},y:{ticks:{color:'#6b7280',callback:v=>'₪'+v},grid:{color:'#eef1f5'}},y2:{position:'right',ticks:{color:'#111827'},grid:{drawOnChartArea:false},suggestedMin:0}}}});
+}
+
+function renderMarketing(m){
+  const ps=platSalesRange(), sel=mktPlatform;
+  let spend,attr,rep,label;
+  if(sel==='facebook'){spend=m.meta;attr=ps.facebook;rep=m.mrep;label='Facebook';}
+  else if(sel==='google'){spend=m.google;attr=ps.google;rep=m.grep;label='Google';}
+  else {spend=m.meta+m.google;attr=ps.facebook+ps.google+ps.other;rep=m.mrep+m.grep;label='All';}
+  const aRoas=spend?attr/spend:0, rRoas=spend?rep/spend:0, sfx=sel==='all'?'':' · '+label;
+  document.getElementById('mktcards').innerHTML=[
+    card('var(--fb)','Ad spend'+sfx,fmt(spend),sel==='all'?`Meta ${fmt(m.meta)} · Google ${fmt(m.google)}`:''),
+    card('var(--gg)','Reported sales'+sfx,fmt(rep),'Platform-reported (Meta/Google)'),
+    card('var(--teal)','Attributed sales'+sfx,fmt(attr),'Shopify last-click'),
+    card('','ROAS',`${f2(rRoas)} <span style="color:#94a3b8;font-size:13px">/ ${f2(aRoas)}</span>`,'reported / attributed'),
+  ].join('');
+  // bars
+  const max=Math.max(m.meta,m.google,1);
+  document.getElementById('spendBars').innerHTML=[
+    {n:'Facebook',v:m.meta,c:'#1877f2',rep:m.mrep,at:ps.facebook},
+    {n:'Google',v:m.google,c:'#34a853',rep:m.grep,at:ps.google},
+    {n:'Other/Direct',v:0,c:'#94a3b8',rep:0,at:ps.other}
+  ].map(x=>`<div class="barrow"><div class="bn"><span class="dot" style="background:${x.c}"></span>${x.n}</div>
+    <div class="bartrack"><div class="barfill" style="width:${x.v/max*100}%;background:${x.c}"></div></div>
+    <div style="width:200px;text-align:right">${fmt(x.v)} <span style="color:#9aa0aa">→ rep ${fmt(x.rep)} · attr ${fmt(x.at)}</span></div></div>`).join('') +
+    `<div class="barrow"><div class="bn" style="font-weight:700">Total</div><div class="bartrack"></div>
+      <div style="width:200px;text-align:right;font-weight:700">${fmt(m.marketing)} → rep ${fmt(m.mrep+m.grep)} · attr ${fmt(ps.facebook+ps.google+ps.other)}</div></div>`;
+  // trend
+  const b=buckets(), labels=b.map(x=>bucketLabel(x.k));
+  const pmap={}; for(const p of PLAT){if(!inRange(p.date))continue;const k=bkey(p.date);(pmap[k]=pmap[k]||{fb:0,g:0});if(p.platform==='facebook')pmap[k].fb+=p.sales;else if(p.platform==='google')pmap[k].g+=p.sales;}
+  const rmap={}; for(const d of D){if(!inRange(d.date))continue;const k=bkey(d.date);(rmap[k]=rmap[k]||{mr:0,gr:0,ms:0,gs:0});rmap[k].mr+=d.meta_reported||0;rmap[k].gr+=d.google_reported||0;rmap[k].ms+=d.meta_spend||0;rmap[k].gs+=d.google_spend||0;}
+  const getSpend=x=>sel==='facebook'?(rmap[x.k]?.ms||0):sel==='google'?(rmap[x.k]?.gs||0):((rmap[x.k]?.ms||0)+(rmap[x.k]?.gs||0));
+  const getRep=x=>sel==='facebook'?(rmap[x.k]?.mr||0):sel==='google'?(rmap[x.k]?.gr||0):((rmap[x.k]?.mr||0)+(rmap[x.k]?.gr||0));
+  const getAttr=x=>sel==='facebook'?(pmap[x.k]?.fb||0):sel==='google'?(pmap[x.k]?.g||0):((pmap[x.k]?.fb||0)+(pmap[x.k]?.g||0));
+  if(spendChart)spendChart.destroy();
+  spendChart=new Chart(document.getElementById('spendChart'),{data:{labels,datasets:[
+    {type:'line',label:'Ad spend',data:b.map(getSpend),borderColor:'#1877f2',backgroundColor:'#1877f2',tension:.3,pointRadius:2},
+    {type:'line',label:'Reported sales',data:b.map(getRep),borderColor:'#34a853',backgroundColor:'#34a853',tension:.3,pointRadius:2},
+    {type:'line',label:'Attributed sales',data:b.map(getAttr),borderColor:'#14b8a6',backgroundColor:'#14b8a6',borderDash:[5,4],tension:.3,pointRadius:2},
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{labels:{color:'#6b7280',boxWidth:12}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.raw)}`}}},
+    scales:{x:{ticks:{color:'#6b7280'},grid:{color:'#eef1f5'}},y:{ticks:{color:'#6b7280',callback:v=>'₪'+v},grid:{color:'#eef1f5'}}}}});
+  // linked orders
+  let rows=ORD.filter(o=>inRange(o.date)); if(sel!=='all') rows=rows.filter(o=>o.platform===sel);
+  rows.sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
+  const totT=rows.reduce((s,o)=>s+(o.total||0),0), totP=rows.reduce((s,o)=>s+(o.profit||0),0), cap=200;
+  document.getElementById('ordsub').textContent=`${rows.length} orders · ${fmt(totT)} sales · ${fmt(totP)} profit (pre-marketing)`+(rows.length>cap?` (showing ${cap})`:'');
+  const PH={facebook:'Facebook',google:'Google',other:'Other/Direct'},PC={facebook:'#1877f2',google:'#34a853',other:'#94a3b8'};
+  const MH={self:'Self-pickup',d2d:'D2D'};
+  let h=`<tr><th>Date</th><th>Order ID</th><th>Platform</th><th>Method</th><th>Sales</th><th>COGS</th><th>Fees</th><th>Profit</th></tr>`;
+  for(const o of rows.slice(0,cap)){
+    const d=new Date(o.date+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit'});
+    h+=`<tr><td>${d}</td><td class="num">${o.name||''}</td><td><span class="dot" style="background:${PC[o.platform]}"></span> ${PH[o.platform]||o.platform}</td>
+      <td>${MH[o.method]||'—'}</td><td class="num">${fmt(o.total)}</td><td class="num">${fmt(o.cogs)}</td><td class="num">${fmt(o.fees)}</td>
+      <td class="num ${o.profit>=0?'pos':'neg'}">${fmt(o.profit)}</td></tr>`;
+  }
+  document.getElementById('ordtbl').innerHTML=h;
+  document.getElementById('mktnote').innerHTML='<b>Reported sales</b> = Meta/Google platform-reported purchase value (these overlap &amp; double-count across platforms). <b>Attributed sales</b> = Shopify last-click (one platform per order, no double-counting). The blended MER on Overview uses real Shopify revenue. <b>Profit</b> per order = Net − COGS − Fees (before marketing).';
+}
+
+function renderProducts(){
+  let rows=productAgg();
+  if(prodSort==='best') rows.sort((a,b)=>b.units-a.units);
+  else if(prodSort==='profit') rows.sort((a,b)=>b.margin-a.margin);
+  else rows.sort((a,b)=>a.margin-b.margin);
+  rows=rows.slice(0,15);
+  let h=`<tr><th>Orders</th><th>Product</th><th>Units</th><th>Net sales</th><th>COGS</th><th>Profit</th><th>Margin</th><th>AOV</th></tr>`;
+  for(const r of rows){
+    const cls=r.margin>=.3?'mh':r.margin<.1?'ml':'mm';
+    h+=`<tr><td class="num">${r.orders}</td><td>${r.title.length>44?r.title.slice(0,44)+'…':r.title}</td>
+      <td class="num">${r.units}</td><td class="num">${fmt(r.sales)}</td><td class="num">${fmt(r.cogs)}</td>
+      <td class="num ${r.profit>=0?'pos':'neg'}">${fmt(r.profit)}</td><td class="num"><span class="pill ${cls}">${(r.margin*100).toFixed(0)}%</span></td>
+      <td class="num">${fmt(r.aov)}</td></tr>`;
+  }
+  document.getElementById('prodtbl').innerHTML=h;
+}
+
+function renderPeriodic(){
+  const b=buckets();
+  let h=`<tr><th>Period</th><th>Orders</th><th>Sales</th><th>COGS</th><th>Fees</th><th>Marketing</th><th>Net profit</th><th>AOV</th><th>MER</th></tr>`;
+  const T={orders:0,total:0,cogs:0,fees:0,meta:0,google:0,marketing:0,netProfit:0};
+  for(const r of b){
+    T.orders+=r.orders;T.total+=r.total;T.cogs+=r.cogs;T.fees+=r.fees;T.marketing+=r.marketing;T.netProfit+=r.netProfit;
+    h+=`<tr class="clickable" data-k="${r.k}"><td>▸ ${bucketLabel(r.k)}</td><td class="num">${r.orders}</td><td class="num">${fmt(r.total)}</td>
+      <td class="num">${fmt(r.cogs)}</td><td class="num">${fmt(r.fees)}</td><td class="num">${fmt(r.marketing)}</td>
+      <td class="num ${r.netProfit>=0?'pos':'neg'}">${fmt(r.netProfit)}</td><td class="num">${fmt(r.aov)}</td><td class="num">${merPill(r.mer)}</td></tr>`;
+  }
+  const mer=T.marketing?T.total/T.marketing:0, aov=T.orders?T.total/T.orders:0;
+  h+=`<tr class="tot"><td>Total</td><td class="num">${T.orders}</td><td class="num">${fmt(T.total)}</td><td class="num">${fmt(T.cogs)}</td>
+    <td class="num">${fmt(T.fees)}</td><td class="num">${fmt(T.marketing)}</td><td class="num ${T.netProfit>=0?'pos':'neg'}">${fmt(T.netProfit)}</td>
+    <td class="num">${fmt(aov)}</td><td class="num">${merPill(mer)}</td></tr>`;
+  document.getElementById('tbl').innerHTML=h;
+  document.querySelectorAll('#tbl tr.clickable').forEach(tr=>tr.onclick=()=>toggleDrill(tr.getAttribute('data-k'),tr));
+}
+function toggleDrill(k,tr){
+  const ex=tr.nextElementSibling;
+  if(ex&&ex.classList.contains('drill')){ex.remove();drillOpen=null;return;}
+  document.querySelectorAll('#tbl tr.drill').forEach(x=>x.remove());
+  const prods=productsForBucket(k);
+  let inner=prods.length?prods.map(p=>`${p.title.length>40?p.title.slice(0,40)+'…':p.title}: ${p.units}× · ${fmt(p.sales)}`).join(' &nbsp;|&nbsp; '):'No products';
+  const row=document.createElement('tr');row.className='drill';
+  row.innerHTML=`<td colspan="9">🛍️ ${inner}</td>`;
+  tr.after(row);drillOpen=k;
+}
+
+/* ---------- controls ---------- */
+function clearOn(id){document.querySelectorAll(`#${id} button`).forEach(b=>b.classList.remove('on'));}
+function setRange(f,t){dateFrom=f;dateTo=t;fromEl.value=f;toEl.value=t;render();}
+function applyPreset(r){
+  if(!TODAY)return;
+  if(r==='today')setRange(TODAY,TODAY);
+  else if(r==='yesterday')setRange(shift(TODAY,-1),shift(TODAY,-1));
+  else if(r==='7')setRange(shift(TODAY,-7),shift(TODAY,-1));
+  else if(r==='30')setRange(shift(TODAY,-30),shift(TODAY,-1));
+  else if(r==='month')setRange(TODAY.slice(0,7)+'-01',TODAY);
+  else if(r==='all'&&D.length)setRange(D[0].date,D[D.length-1].date);
+}
+fromEl.onchange=()=>{dateFrom=fromEl.value;clearOn('preset');render();};
+toEl.onchange=()=>{dateTo=toEl.value;clearOn('preset');render();};
+document.querySelectorAll('#preset button').forEach(b=>b.onclick=()=>{clearOn('preset');b.classList.add('on');applyPreset(b.getAttribute('data-r'));});
+document.querySelectorAll('#period button').forEach(b=>b.onclick=()=>{clearOn('period');b.classList.add('on');period=b.getAttribute('data-p');render();});
+document.querySelectorAll('#mktplat button').forEach(b=>b.onclick=()=>{clearOn('mktplat');b.classList.add('on');mktPlatform=b.getAttribute('data-m');render();});
+document.querySelectorAll('#prodtab button').forEach(b=>b.onclick=()=>{clearOn('prodtab');b.classList.add('on');prodSort=b.getAttribute('data-s');render();});
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
+  clearOn('tabs');b.classList.add('on');screen=b.getAttribute('data-s');
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  document.getElementById('sc-'+screen).classList.add('on');render();});
+document.querySelector('#period button[data-p="day"]').classList.add('on');
+document.querySelector('#mktplat button[data-m="all"]').classList.add('on');
+document.querySelector('#prodtab button[data-s="best"]').classList.add('on');
+document.querySelector('#tabs button[data-s="overview"]').classList.add('on');
+document.querySelector('#preset button[data-r="7"]').classList.add('on');
+document.getElementById('sc-overview').classList.add('on');
+
+function init(){
+  const pd=window.PROFIT_DATA||{};
+  D=pd.days||[];P=pd.product_days||[];PLAT=pd.platform_days||[];ORD=pd.orders||[];
+  document.getElementById('updated').textContent=pd.updated||'—';
+  TODAY=israelToday();   // presets always track the real Israel calendar date
+  if(D.length){fromEl.min=D[0].date;fromEl.max=toEl.max=TODAY;toEl.min=D[0].date;}
+  applyPreset('7');     // default: last 7 days (excluding today)
+  render();
+}
+(function(){const s=document.createElement('script');s.src='profit_data.js?t='+Date.now();
+  s.onload=init;s.onerror=()=>document.getElementById('updated').textContent='Failed to load data';
+  document.head.appendChild(s);})();
+</script>
+</body>
+</html>

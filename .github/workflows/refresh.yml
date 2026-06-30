@@ -1,0 +1,53 @@
+name: Refresh profit dashboard
+
+on:
+  schedule:
+    - cron: '0 5 * * *'            # 08:00 Israel — refresh + send daily report
+    - cron: '0 8,11,14,17 * * *'   # 11:00/14:00/17:00/20:00 Israel — refresh only
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+      SHOPIFY_ADMIN_TOKEN: ${{ secrets.SHOPIFY_ADMIN_TOKEN }}
+      Meta_Access_Token: ${{ secrets.META_ACCESS_TOKEN }}
+      Ad_Account_Id: ${{ secrets.AD_ACCOUNT_ID }}
+      GOOGLE_ADS_CLIENT_ID: ${{ secrets.GOOGLE_ADS_CLIENT_ID }}
+      GOOGLE_ADS_CLIENT_SECRET: ${{ secrets.GOOGLE_ADS_CLIENT_SECRET }}
+      GOOGLE_ADS_REFRESH_TOKEN: ${{ secrets.GOOGLE_ADS_REFRESH_TOKEN }}
+      GOOGLE_ADS_DEVELOPER_TOKEN: ${{ secrets.GOOGLE_ADS_DEVELOPER_TOKEN }}
+      GOOGLE_ADS_CUSTOMER_ID: ${{ secrets.GOOGLE_ADS_CUSTOMER_ID }}
+      WHATSAPP_INSTANCE_ID: ${{ secrets.WHATSAPP_INSTANCE_ID }}
+      WHATSAPP_TOKEN: ${{ secrets.WHATSAPP_TOKEN }}
+      DASH_SHARE_PASSWORD: ${{ secrets.DASH_SHARE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Pull data (Shopify + Meta + Google)
+        run: python pipeline/pull.py
+      - name: Build encrypted dashboard
+        run: node pipeline/build.mjs
+      - name: Commit & deploy to Pages
+        run: |
+          git config user.name "POMY Bot"
+          git config user.email "bot@pomysport.com"
+          git add index.html
+          git commit -m "cloud refresh $(TZ=Asia/Jerusalem date +%Y-%m-%d\ %H:%M)" || echo "no changes"
+          git push
+      - name: Send daily WhatsApp report (morning run / manual only)
+        if: github.event.schedule == '0 5 * * *' || github.event_name == 'workflow_dispatch'
+        run: node pipeline/report.mjs --send

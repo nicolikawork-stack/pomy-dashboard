@@ -1,0 +1,61 @@
+{
+  "_doc": "Full COGS (product + shipping) per order for the BeProfit dashboard. method self|d2d (from Shopify shippingLine). qty = units of that product in the order. Cost types: full_usd (x rate) / full_ils (direct ILS) by method+qty / comfy split (product_per_unit_usd + shipping_usd) / product_per_unit_usd + ship_ils_flat. qty above a tier's max reuses the top tier; a missing method falls back to d2d. Source: Nicole supplier tables + economics.md. Order matters: first matching product wins.",
+  "rate": 3.0,
+  "default_method": "d2d",
+  "products": {
+    "comfy": {
+      "match": ["comfy", "cloud", "כפכפי", "קומפי"],
+      "product_per_unit_usd": 3.38,
+      "shipping_usd": { "self": {"1": 12.61, "2": 20.59, "3": 28.56},
+                        "d2d":  {"1": 17.03, "2": 25.70, "3": 34.36} }
+    },
+    "fresh2pack": {
+      "match": ["זוג כריות מתיחה לגב", "(2 יחידות)"],
+      "full_ils": { "self": {"1": 85.9}, "d2d": {"1": 85.9} }
+    },
+    "fresh": {
+      "match": ["מתיחה לגב fresh", "כרית מתיחה", "fresh"],
+      "full_ils": { "self": {"1": 54.9}, "d2d": {"1": 54.9} }
+    },
+    "sciaticabelt": {
+      "match": ["סיאטיקה", "חגורה לחיסול כאבי גב"],
+      "full_ils": { "self": {"1": 52}, "d2d": {"1": 52} }
+    },
+    "posture": {
+      "match": ["ליישור גב", "שיפור יציבה", "מחזיק יציבה"],
+      "full_usd": { "self": {"1": 10.77, "2": 17.66}, "d2d": {"1": 15.79} }
+    },
+    "legpillow": {
+      "match": ["כרית אורתופדית לרגליים", "כרית לרגליים", "כרית רגליים", "leg pillow"],
+      "full_usd": { "self": {"1": 15.9}, "d2d": {"1": 19.69} }
+    },
+    "sittingpillow": {
+      "match": ["כרית ישיבה", "לישיבה ממושכת", "כרית אורתופדית לישיבה", "לעמוד השדרה"],
+      "full_usd": { "self": {"1": 22}, "d2d": {"1": 27} }
+    },
+    "coolingblanket": {
+      "match": ["שמיכת קירור"],
+      "full_usd": { "self": {"1": 27}, "d2d": {"1": 32} }
+    },
+    "kneesleeve": {
+      "match": ["שרוול ברכיים"],
+      "full_usd": { "self": {"1": 15}, "d2d": {"1": 15} }
+    },
+    "migrainecap": {
+      "match": ["כובע ג'ל", "מיגרנ", "כאבי ראש"],
+      "full_usd": { "self": {"1": 16}, "d2d": {"1": 16} }
+    },
+    "smartwatch": {
+      "match": ["שעון חכם"],
+      "full_usd": { "self": {"1": 30}, "d2d": {"1": 35} }
+    },
+    "periodwarmer": {
+      "match": ["נוני", "כאבי מחזור"],
+      "full_usd": { "self": {"1": 13}, "d2d": {"1": 13} }
+    },
+    "roller": {
+      "match": ["רולר", "roller"],
+      "full_ils": { "self": {"1": 55}, "d2d": {"1": 55} }
+    }
+  }
+}
