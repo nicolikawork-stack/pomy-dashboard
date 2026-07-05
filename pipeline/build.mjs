@@ -37,7 +37,10 @@ async function unlock(pw){
   const pt = await crypto.subtle.decrypt({name:'AES-GCM',iv:b2b(ENC.iv)}, key, b2b(ENC.data));
   return JSON.parse(new TextDecoder().decode(pt));
 }
-(function(){
+(async function(){
+  const KEY='pomy_dash_pw';
+  const saved=localStorage.getItem(KEY);
+  if(saved){ try{ const d=await unlock(saved); window.PROFIT_DATA=d; init(); return; }catch(e){ localStorage.removeItem(KEY); } }
   const ov = document.createElement('div');
   ov.style.cssText='position:fixed;inset:0;background:#0f1115;display:flex;align-items:center;justify-content:center;z-index:9999';
   ov.innerHTML='<div style="background:#fff;border-radius:16px;padding:30px 34px;max-width:340px;text-align:center;font-family:sans-serif">'
@@ -50,7 +53,7 @@ async function unlock(pw){
   const pw=ov.querySelector('#pw'), err=ov.querySelector('#err'), go=ov.querySelector('#go');
   async function attempt(){
     err.textContent=''; go.textContent='Decrypting…';
-    try{ const data=await unlock(pw.value); window.PROFIT_DATA=data; ov.remove(); init(); }
+    try{ const data=await unlock(pw.value); localStorage.setItem(KEY,pw.value); window.PROFIT_DATA=data; ov.remove(); init(); }
     catch(e){ go.textContent='Enter'; err.textContent='Wrong password'; pw.value=''; pw.focus(); }
   }
   go.onclick=attempt; pw.addEventListener('keydown',e=>{if(e.key==='Enter')attempt();});
