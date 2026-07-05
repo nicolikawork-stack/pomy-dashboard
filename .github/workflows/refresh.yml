@@ -47,7 +47,9 @@ jobs:
           git config user.email "bot@pomysport.com"
           git add index.html
           git commit -m "cloud refresh $(TZ=Asia/Jerusalem date +%Y-%m-%d\ %H:%M)" || echo "no changes"
-          git push
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin main && git push origin main && break || sleep 6
+          done
       - name: Send daily WhatsApp report (morning run / manual only)
         if: github.event.schedule == '0 5 * * *' || github.event_name == 'workflow_dispatch'
         run: node pipeline/report.mjs --send
