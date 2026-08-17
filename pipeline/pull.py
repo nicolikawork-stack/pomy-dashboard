@@ -13,7 +13,7 @@ DATA_JS = os.path.join(ROOT, "profit_data.js")
 COGS_PATH = os.path.join(HERE, "cogs_rules.json")
 TZ = ZoneInfo("Asia/Jerusalem")
 SHOP_API = "2025-07"
-GADS_API = "v21"
+GADS_API = "v22"
 DAYS_BACK = int(os.environ.get("DAYS_BACK", "180"))
 
 env = os.environ   # credentials come from GitHub Secrets
